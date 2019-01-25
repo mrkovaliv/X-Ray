@@ -1,100 +1,108 @@
-import numpy as np
-
 import os
 
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.utils import np_utils
-from keras.layers import Dense, Flatten, Activation
-from keras.layers import Dropout
-from keras.layers.convolutional import Conv2D, MaxPooling2D
-
-from keras.optimizers import SGD
-
+import numpy as np
 import cv2
 
-import sys
+from keras.models import Sequential
+from keras.utils import np_utils
+from keras.layers import Dense, Flatten
+from keras.layers import Dropout
+from keras.layers.convolutional import Conv2D, MaxPooling2D
+from keras.optimizers import SGD, Adam
+from keras.callbacks import ModelCheckpoint, TensorBoard
 
+dataset_root_folder = "/media/andrew/b84c4d95-450e-4802-b12d-b33e25343b1b/home/andrew/MURA_PROCESSED"
 
-#тут роблю numpy Array X_train і роблю всі зображення розміру 406/512
+# img_rows, img_cols = 406, 512
+img_rows, img_cols = 203, 256
 
-pathName=""
+nb_classes = 2
+nb_epoch = 15
+batch_size = 4
 
-X_train=[]
-i=0    
-for root, directories, filenames in os.walk('/home/volodymyr/MURA/XR_ELBOW'):
-    
-    for filename in filenames[:100] : 
-        pathName=os.path.join(root,filename)
-        
+# Read all images and store as X_train and X_valid
+X_train = []
+X_valid = []
+
+for root, directories, filenames in os.walk(os.path.join(dataset_root_folder, "train", "XR_ELBOW", "X")):
+    for filename in filenames:
+        pathName = os.path.join(root, filename)
         orig_img = cv2.imread(pathName, 0)
-        
-        orig_img = cv2.resize(orig_img ,(128,51))
-        
+        orig_img = cv2.resize(orig_img, (img_rows, img_cols))
+
         X_train.append(orig_img)
-        
-X_train = np.array(X_train )
 
-        
-#тут роблю numpy Array Y_train
-pathName=""
-y_train=[]
 
-for root, directories, filenames in os.walk('/home/volodymyr/MURA/XR_ELBOW_X'):
-    
-    for filename in filenames[:100]: 
-        pathName=os.path.join(root,filename)
-        
+for root, directories, filenames in os.walk(os.path.join(dataset_root_folder, "valid", "XR_ELBOW", "X")):
+    for filename in filenames:
+        pathName = os.path.join(root, filename)
+        orig_img = cv2.imread(pathName, 0)
+        orig_img = cv2.resize(orig_img, (img_rows, img_cols))
+
+        X_valid.append(orig_img)
+
+X_train = np.array(X_train)
+X_valid = np.array(X_valid)
+
+#  read labels for images
+y_train = []
+y_valid = []
+for root, directories, filenames in os.walk(os.path.join(dataset_root_folder, "train", "XR_ELBOW", "Y")):
+    for filename in filenames:
+        pathName = os.path.join(root, filename)
+
         file = np.loadtxt(pathName)
-        
         y_train.append(file)
-        
-y_train = np.array(y_train )
-        
+
+for root, directories, filenames in os.walk(os.path.join(dataset_root_folder, "valid", "XR_ELBOW", "Y")):
+    for filename in filenames:
+        pathName = os.path.join(root, filename)
+
+        file = np.loadtxt(pathName)
+        y_valid.append(file)
+
+y_train = np.array(y_train)
+y_valid = np.array(y_valid)
+
+print("X(test): ", X_train.shape)
+print("Y(test): ", y_train.shape)
+print("X(valid): ", X_valid.shape)
+print("Y(valid): ", y_valid.shape)
+
 np.random.seed(42)
 
+X_train = X_train.reshape(-1, img_rows, img_cols, 1)
+y_train = np_utils.to_categorical(y_train, nb_classes)
 
-
-X_train = X_train.reshape(100,128,51,1)
-
-#print(X_train.shape)
-#X_train = X_train.astype('float')
-#X_train /= 255
-
-nb_classes=2
-
-img_rows, img_cols = 406,512
-#batch_size = 32
-
-nb_epoch = 25
-Y_train = np_utils.to_categorical(y_train, nb_classes)
+X_valid = X_valid.reshape(-1, img_rows, img_cols, 1)
+y_valid = np_utils.to_categorical(y_valid, nb_classes)
 
 model = Sequential()
 
-model.add(Conv2D(filters=32, kernel_size=(3, 3), padding='valid', input_shape=(128,51,1),
-                 activation='relu',data_format="channels_last")) # (2)
+model.add(Conv2D(filters=32, kernel_size=(3, 3), padding='valid', input_shape=(img_rows, img_cols, 1),
+                 activation='relu', data_format="channels_last"))  # (2)
 model.add(Conv2D(filters=32, kernel_size=(3, 3),
-                 activation='relu',data_format="channels_last")) # (3)
-model.add(MaxPooling2D(pool_size=(2,2), data_format='channels_last')) # (4)
-model.add(Dropout(0.25)) 
-#model.add(Conv2D(64, (3, 3), padding='valid', activation='relu',data_format="channels_last")) # (5)
-#model.add(Conv2D(64, (3, 3), activation='relu',data_format="channels_last")) # (6)
-#model.add(MaxPooling2D(pool_size=(2,2), data_format='channels_last')) # (7)
-#model.add(Dropout(0.25)) # Добавим слой регуляризации 
+                 activation='relu', data_format="channels_last"))  # (3)
+model.add(MaxPooling2D(pool_size=(2, 2), data_format='channels_last'))  # (4)
+model.add(Dropout(0.25))
 model.add(Flatten())
-model.add(Dense(6528, activation='relu')) # (8)
-model.add(Dropout(0.5)) # Добавим слой регуляризации 
-model.add(Dense(2, activation='softmax')) # (9)
+model.add(Dense(100, activation='relu'))  # (8)
+model.add(Dropout(0.5))  # Regularization layer
+model.add(Dense(2, activation='softmax'))  # (9)
+print("model.summary: ", model.summary())
 
-sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-#model.add(Dense(50, input_dim=207872, activation="relu", kernel_initializer="normal"))
-#model.add(Dense(2, activation="softmax", kernel_initializer="normal"))
+# sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+adam = Adam(lr=0.01)
 
-#print(model.summary())
+# Saving model weights after each epoch callback
+filepath = "./models/simple-cnn-{epoch:02d}-{val_acc:.2f}.hdf5"
+checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
 
-#model.compile(loss="mean_absolute_error", optimizer="SGD", metrics=["accuracy"])
-model.compile(loss='categorical_crossentropy',optimizer=sgd,metrics=['accuracy'])
-model.fit(X_train, Y_train, batch_size=2,epochs=5,validation_split=0.1,shuffle=True,verbose=1)
+# Tensorboard callback
+tbCallBack = TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, write_images=True)
 
-#model.fit(X_train, Y_train, batch_size=300, epochs=1, validation_split=0.1, verbose=1)
+callbacks_list = [checkpoint, tbCallBack]
+
+model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
+model.fit(X_train, y_train, batch_size=batch_size, epochs=nb_epoch, callbacks=callbacks_list,
+          validation_data=(X_valid, y_valid), shuffle=True, verbose=1)
