@@ -18,7 +18,7 @@ img_rows, img_cols = 203, 256
 
 nb_classes = 2
 nb_epoch = 15
-batch_size = 4
+batch_size = 32
 
 # Read all images and store as X_train and X_valid
 X_train = []
@@ -79,20 +79,30 @@ y_valid = np_utils.to_categorical(y_valid, nb_classes)
 
 model = Sequential()
 
-model.add(Conv2D(filters=32, kernel_size=(3, 3), padding='valid', input_shape=(img_rows, img_cols, 1),
-                 activation='relu', data_format="channels_last"))  # (2)
-model.add(Conv2D(filters=32, kernel_size=(3, 3),
-                 activation='relu', data_format="channels_last"))  # (3)
-model.add(MaxPooling2D(pool_size=(2, 2), data_format='channels_last'))  # (4)
+model.add(Conv2D(filters=64, kernel_size=(64, 64), padding='valid', input_shape=(img_rows, img_cols, 1), activation='relu'))
+model.add(MaxPooling2D(pool_size=(4, 4), strides=(2, 2)))
+
+model.add(Conv2D(filters=32, kernel_size=(32, 32), activation='relu'))
+model.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
+
+model.add(Conv2D(filters=16, kernel_size=(16, 16), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+
 model.add(Dropout(0.25))
 model.add(Flatten())
-model.add(Dense(100, activation='relu'))  # (8)
+
+model.add(Dense(64, activation='relu'))  # (8)
 model.add(Dropout(0.5))  # Regularization layer
+
+model.add(Dense(16, activation='relu'))  # (8)
+model.add(Dropout(0.25))  # Regularization layer
+
 model.add(Dense(2, activation='softmax'))  # (9)
 print("model.summary: ", model.summary())
 
 # sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-adam = Adam(lr=0.01)
+sgd = SGD(lr=0.01)
+# adam = Adam(lr=0.01)
 
 # Saving model weights after each epoch callback
 filepath = "./models/simple-cnn-{epoch:02d}-{val_acc:.2f}.hdf5"
@@ -103,6 +113,6 @@ tbCallBack = TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, w
 
 callbacks_list = [checkpoint, tbCallBack]
 
-model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 model.fit(X_train, y_train, batch_size=batch_size, epochs=nb_epoch, callbacks=callbacks_list,
           validation_data=(X_valid, y_valid), shuffle=True, verbose=1)
