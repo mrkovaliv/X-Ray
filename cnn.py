@@ -18,7 +18,7 @@ img_rows, img_cols = 203, 256
 
 nb_classes = 2
 nb_epoch = 15
-batch_size = 32
+batch_size = 16
 
 # Read all images and store as X_train and X_valid
 X_train = []
@@ -105,7 +105,7 @@ sgd = SGD(lr=0.01)
 # adam = Adam(lr=0.01)
 
 # Saving model weights after each epoch callback
-filepath = "./models/simple-cnn-{epoch:02d}-{val_acc:.2f}.hdf5"
+filepath = "./models/simple-cnn/simple-cnn-{epoch:02d}-{val_acc:.2f}.hdf5"
 checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
 
 # Tensorboard callback
