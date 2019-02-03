@@ -106,7 +106,8 @@ sgd = SGD(lr=0.01)
 
 # Saving model weights after each epoch callback
 filepath = "./models/simple-cnn/simple-cnn-{epoch:02d}-{val_acc:.2f}.hdf5"
-checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max',
+                             save_weights_only=False)
 
 # Tensorboard callback
 tbCallBack = TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, write_images=True)
