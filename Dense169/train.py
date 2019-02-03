@@ -54,7 +54,6 @@ def train_model(model, criterion, optimizer, dataloaders, scheduler,
                 running_corrects += torch.sum(preds == labels.data)
                 confusion_matrix[phase].add(preds, labels.data)
 
-
             epoch_loss = running_loss.data.cpu().numpy() / dataset_sizes[phase]
             epoch_acc = running_corrects.data.cpu().numpy() / dataset_sizes[phase]
 
@@ -73,6 +72,9 @@ def train_model(model, criterion, optimizer, dataloaders, scheduler,
         print('Time elapsed: {:.0f}m {:.0f}s'.format(
             time_elapsed // 60, time_elapsed % 60))
         print()
+
+        torch.save(model, './models/dense-169-epoch{}.pth'.format(epoch + 1))
+
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
